@@ -11,22 +11,36 @@ const parquetState = {
 };
 
 const DUCKDB_MJS = 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.29.0/+esm';
-const DUCKDB_BUNDLES = 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.29.0/dist/duckdb-browser.mjs';
 
 function parquetEscapeIdent(value) { return '"' + String(value).replaceAll('"', '""') + '"'; }
 function parquetEscapeString(value) { return "'" + String(value).replaceAll("'", "''") + "'"; }
 
 async function loadDuckDB() {
   if (parquetState.db) return parquetState.db;
+
   const duckdb = await import(DUCKDB_MJS);
-  const worker = new Worker(DUCKDB_BUNDLES, { type: 'module' });
-  const logger = new duckdb.ConsoleLogger();
-  const db = new duckdb.AsyncDuckDB(logger, worker);
   const bundles = duckdb.getJsDelivrBundles();
-  await db.instantiate(bundles.mvp);
-  parquetState.db = db;
-  parquetState.conn = await db.connect();
-  return db;
+  const bundle = await duckdb.selectBundle(bundles);
+
+  // Web Workers must be same-origin. DuckDB's CDN worker is loaded through
+  // a same-origin Blob worker, which is the deployment pattern recommended
+  // by DuckDB-Wasm for CDN usage (and works on GitHub Pages).
+  const workerUrl = URL.createObjectURL(
+    new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+  );
+
+  try {
+    const worker = new Worker(workerUrl);
+    const logger = new duckdb.ConsoleLogger();
+    const db = new duckdb.AsyncDuckDB(logger, worker);
+    await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+
+    parquetState.db = db;
+    parquetState.conn = await db.connect();
+    return db;
+  } finally {
+    URL.revokeObjectURL(workerUrl);
+  }
 }
 
 function installParquetStyles() {
