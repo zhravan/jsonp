@@ -3,318 +3,224 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JSONP - Dev toolkit</title>
+    <meta name="theme-color" content="#0b0f19" />
+    <meta name="description" content="JSONP is a fast, focused developer toolkit for working with JSON, code, mock data and Markdown." />
+    <title>JSONP — Developer Toolkit</title>
     <link rel="icon" type="image/svg+xml" href="json.svg" />
     <link rel="stylesheet" href="index.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <script type="module">
       import { faker } from "https://cdn.jsdelivr.net/npm/@faker-js/faker/+esm";
-
       window.faker = faker;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css"
-    />
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
     <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
     <script src="presets.js"></script>
   </head>
 
   <body>
     <div class="app-container">
-      <!-- Mobile Sidebar Toggle -->
-      <button class="mobile-sidebar-toggle" onclick="toggleSidebar()">
+      <button class="mobile-sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation">
         <i class="fas fa-bars"></i>
       </button>
+      <div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
 
-      <!-- Sidebar -->
-      <div class="sidebar">
+      <aside class="sidebar" aria-label="Developer tools navigation">
         <div class="sidebar-header">
-          <h3>Features</h3>
-          <button class="mobile-sidebar-close" onclick="toggleSidebar()">
+          <a class="brand" href="#" onclick="switchMode('formatter'); return false;" aria-label="JSONP home">
+            <span class="brand-mark">{ }</span>
+            <span>
+              <strong>JSONP</strong>
+              <small>Developer toolkit</small>
+            </span>
+          </a>
+          <button class="mobile-sidebar-close" onclick="toggleSidebar()" aria-label="Close navigation">
             <i class="fas fa-times"></i>
           </button>
         </div>
+
         <div class="sidebar-content">
-          <div class="feature-group">
-            <div class="feature-item active" onclick="switchMode('formatter')">
-              <i class="fas fa-code"></i>
-              <span>JSON Formatter</span>
-            </div>
-            <div class="feature-item" onclick="switchMode('compare')">
-              <i class="fas fa-not-equal"></i>
-              <span>JSON Compare</span>
-            </div>
-            <div class="feature-item" onclick="switchMode('codegen')">
-              <i class="fas fa-file-code"></i>
-              <span>JSON to Code</span>
-            </div>
-            <div class="feature-item" onclick="switchMode('convert')">
-              <i class="fas fa-exchange-alt"></i>
-              <span>Dict ↔ JSON</span>
-            </div>
-            <div class="feature-item" onclick="switchMode('mockgen')">
-              <i class="fas fa-random"></i>
-              <span>Mock Data</span>
-            </div>
-            <div class="feature-item" onclick="switchMode('editor')">
-              <i class="fas fa-edit"></i>
-              <span>Markdown Editor</span>
+          <div class="sidebar-section-label">Workspace</div>
+          <nav class="feature-group">
+            <button class="feature-item active" onclick="switchMode('formatter')">
+              <span class="feature-icon"><i class="fas fa-code"></i></span>
+              <span class="feature-copy"><strong>JSON Formatter</strong><small>Format, inspect, search</small></span>
+              <kbd>1</kbd>
+            </button>
+            <button class="feature-item" onclick="switchMode('compare')">
+              <span class="feature-icon"><i class="fas fa-code-compare"></i></span>
+              <span class="feature-copy"><strong>JSON Compare</strong><small>Diff two payloads</small></span>
+              <kbd>2</kbd>
+            </button>
+            <button class="feature-item" onclick="switchMode('codegen')">
+              <span class="feature-icon"><i class="fas fa-file-code"></i></span>
+              <span class="feature-copy"><strong>JSON to Code</strong><small>Generate typed models</small></span>
+              <kbd>3</kbd>
+            </button>
+            <button class="feature-item" onclick="switchMode('convert')">
+              <span class="feature-icon"><i class="fas fa-right-left"></i></span>
+              <span class="feature-copy"><strong>Dict ↔ JSON</strong><small>Transform instantly</small></span>
+              <kbd>4</kbd>
+            </button>
+            <button class="feature-item" onclick="switchMode('mockgen')">
+              <span class="feature-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
+              <span class="feature-copy"><strong>Mock Data</strong><small>Generate realistic fixtures</small></span>
+              <kbd>5</kbd>
+            </button>
+            <button class="feature-item" onclick="switchMode('editor')">
+              <span class="feature-icon"><i class="fas fa-pen-to-square"></i></span>
+              <span class="feature-copy"><strong>Markdown Editor</strong><small>Write and preview docs</small></span>
+              <kbd>6</kbd>
+            </button>
+          </nav>
+
+          <div class="sidebar-tip">
+            <div class="tip-icon"><i class="fas fa-bolt"></i></div>
+            <div>
+              <strong>Built for flow</strong>
+              <p>Your work is saved locally as you switch between tools.</p>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Main Content -->
-      <div class="main-content">
-        <div class="header">
-          <h1 class="text-center animate__animated animate__fadeInDown">
-            JSONP – Dev Toolkit
-          </h1>
+        <div class="sidebar-footer">
+          <div class="sidebar-footer-links">
+            <a href="https://github.com/shravan20/jsonp" target="_blank" rel="noopener noreferrer"><i class="fab fa-github"></i> GitHub</a>
+            <button onclick="toggleShortcutModal()"><i class="fas fa-keyboard"></i> Shortcuts</button>
+          </div>
+          <span class="version-pill">v1.0</span>
+        </div>
+      </aside>
 
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-context">
+            <span class="eyebrow">Developer workspace</span>
+            <h1 id="page-title">JSON Formatter</h1>
+          </div>
           <div class="header-actions">
-            <button class="dark-mode-toggle" onclick="toggleDarkMode()">
+            <div class="status-chip"><span class="status-dot"></span> Local-first</div>
+            <button class="icon-button dark-mode-toggle" onclick="toggleDarkMode()" aria-label="Toggle theme" title="Toggle theme">
               <i class="fas fa-moon"></i>
             </button>
-            <button
-              class="shortcut-preview-button"
-              onclick="toggleShortcutModal()"
-            >
+            <button class="icon-button shortcut-preview-button" onclick="toggleShortcutModal()" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
               <i class="fas fa-keyboard"></i>
             </button>
           </div>
-        </div>
+        </header>
 
-        <!-- Formatter Section -->
-        <div id="formatter-section">
-          <div id="formatter-tabs-container" class="tabs">
-            <button class="add-tab-button" onclick="addFormatterTab()">
-              + Add Tab
-            </button>
-            <select onchange="loadFormatterPreset(this.value)" class="preset-select">
-              <option value="">-- Load Preset --</option>
-            </select>
-          </div>
-          <div id="formatter-tab-contents">
-            <!-- Formatter tab contents will be dynamically added here -->
-          </div>
-        </div>
-
-        <!-- Compare Section -->
-        <div id="compare-section" style="display: none">
-          <div id="compare-tabs-container" class="tabs">
-            <button class="add-tab-button" onclick="addCompareTab()">
-              + Add Tab
-            </button>
-            <select onchange="loadComparePreset(this.value)" class="preset-select">
-              <option value="">-- Load Preset --</option>
-            </select>
-          </div>
-          <div id="compare-tab-contents">
-            <!-- Compare tab contents will be dynamically added here -->
-          </div>
-        </div>
-
-        <!-- Code Generator Section -->
-        <div id="codegen-section" style="display: none">
-          <div id="codegen-tabs-container" class="tabs">
-            <button class="add-tab-button" onclick="addCodegenTab()">
-              + Add Tab
-            </button>
-            <select onchange="loadCodegenPreset(this.value)" class="preset-select">
-              <option value="">-- Load Preset --</option>
-            </select>
-          </div>
-          <div id="codegen-tab-contents">
-            <!-- CodeGen tab contents will be dynamically added here -->
-          </div>
-        </div>
-
-        <!-- Convert Section -->
-        <div id="convert-section" style="display: none">
-          <div class="tabs">
-            <button
-              class="tab-button active"
-              onclick="switchConvertDirection('dict-to-json')"
-            >
-              Dict → JSON
-            </button>
-            <button
-              class="tab-button"
-              onclick="switchConvertDirection('json-to-dict')"
-            >
-              JSON → Dict
-            </button>
-          </div>
-          <textarea
-            id="convert-input"
-            class="json-input"
-            placeholder="Paste here..."
-          ></textarea>
-          <button onclick="convert()">Convert</button>
-          <button class="copy-button" onclick="copyConvertOutput()">
-            Copy Output
-          </button>
-          <pre
-            class="code-output"
-            style="margin-top: 10px; overflow: auto"
-          ></pre>
-        </div>
-
-        <!-- Mock Data Generator -->
-        <div id="mockgen-section" style="display: none">
-          <h2>Mock Data Generator</h2>
-
-          <!-- Tab Buttons -->
-          <div style="margin-bottom: 10px">
-            <button
-              onclick="switchMockTab('schema')"
-              id="mock-tab-schema"
-              class="active"
-            >
-              Schema Editor
-            </button>
-            <button onclick="switchMockTab('docs')" id="mock-tab-docs">
-              Docs
-            </button>
-          </div>
-
-          <!-- Schema Panel -->
-          <div id="mockgen-schema-panel">
-            <label for="mockgen-count">Number of Records:</label>
-            <input
-              type="number"
-              id="mockgen-count"
-              value="1"
-              min="1"
-              max="1000"
-              style="width: 60px"
-            />
-
-            <select onchange="loadMockPreset(this.value)">
-              <option value="">-- Preset --</option>
-              <option value="User">User</option>
-              <option value="Product">Product</option>
-            </select>
-
-            <div style="margin-top: 10px">
-              <textarea
-                id="mock-schema-input"
-                class="json-input"
-                placeholder="Enter schema here..."
-              ></textarea>
-            </div>
-
-            <div style="margin-top: 10px">
-              <button onclick="generateMockData()">Generate</button>
-              <button onclick="copyMockOutput('json')">Copy JSON</button>
-              <button onclick="copyMockOutput('csv')">Copy CSV</button>
-              <button onclick="exportMockOutput('json')">Export as JSON</button>
-              <button onclick="exportMockOutput('csv')">Export as CSV</button>
-              <input
-                type="text"
-                id="userInput"
-                placeholder="File Download Name(optional)"
-              />
-
-              <label style="margin-left: 20px">
-                <input
-                  type="radio"
-                  name="mock-view-mode"
-                  value="json"
-                  checked
-                  onchange="updateMockView()"
-                />
-                JSON
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="mock-view-mode"
-                  value="table"
-                  onchange="updateMockView()"
-                />
-                Table
-              </label>
-            </div>
-
-            <p id="mock-stats" style="margin-top: 10px"></p>
-
-            <div id="mock-output-container" style="margin-top: 10px">
-              <pre id="mock-output" class="code-output"></pre>
+        <div class="workspace-shell">
+          <div class="workspace-intro">
+            <div>
+              <span class="workspace-badge"><i class="fas fa-sparkles"></i> Focus mode</span>
+              <p>Shape data, compare payloads, generate code, and keep your developer workflow in one place.</p>
             </div>
           </div>
 
-          <!-- Docs Panel -->
-          <div id="mockgen-docs-panel" style="display: none; margin-top: 20px">
-            <div id="mockgen-docs-preview" class="markdown-preview"></div>
-          </div>
+          <section id="formatter-section" class="tool-section">
+            <div class="section-heading">
+              <div>
+                <span class="section-kicker">Format & inspect</span>
+                <h2>JSON Workspace</h2>
+                <p>Keep multiple payloads open, search through them, and switch between raw and tree views.</p>
+              </div>
+            </div>
+            <div id="formatter-tabs-container" class="tabs tool-toolbar">
+              <button class="add-tab-button primary-action" onclick="addFormatterTab()"><i class="fas fa-plus"></i> New tab</button>
+              <select onchange="loadFormatterPreset(this.value)" class="preset-select" aria-label="Load formatter preset">
+                <option value="">Load preset</option>
+              </select>
+            </div>
+            <div id="formatter-tab-contents"></div>
+          </section>
+
+          <section id="compare-section" class="tool-section" style="display: none">
+            <div class="section-heading"><div><span class="section-kicker">Diff & review</span><h2>Compare JSON</h2><p>See what changed between two payloads without leaving the workspace.</p></div></div>
+            <div id="compare-tabs-container" class="tabs tool-toolbar">
+              <button class="add-tab-button primary-action" onclick="addCompareTab()"><i class="fas fa-plus"></i> New comparison</button>
+              <select onchange="loadComparePreset(this.value)" class="preset-select" aria-label="Load compare preset"><option value="">Load preset</option></select>
+            </div>
+            <div id="compare-tab-contents"></div>
+          </section>
+
+          <section id="codegen-section" class="tool-section" style="display: none">
+            <div class="section-heading"><div><span class="section-kicker">Generate</span><h2>JSON to Code</h2><p>Turn representative JSON into code you can drop into your project.</p></div></div>
+            <div id="codegen-tabs-container" class="tabs tool-toolbar">
+              <button class="add-tab-button primary-action" onclick="addCodegenTab()"><i class="fas fa-plus"></i> New generation</button>
+              <select onchange="loadCodegenPreset(this.value)" class="preset-select" aria-label="Load codegen preset"><option value="">Load preset</option></select>
+            </div>
+            <div id="codegen-tab-contents"></div>
+          </section>
+
+          <section id="convert-section" class="tool-section" style="display: none">
+            <div class="section-heading"><div><span class="section-kicker">Transform</span><h2>Dict ↔ JSON</h2><p>Switch between Python-style dictionaries and JSON with one clean workflow.</p></div></div>
+            <div class="tabs direction-tabs">
+              <button class="tab-button active" onclick="switchConvertDirection('dict-to-json')">Dict <span>→</span> JSON</button>
+              <button class="tab-button" onclick="switchConvertDirection('json-to-dict')">JSON <span>→</span> Dict</button>
+            </div>
+            <textarea id="convert-input" class="json-input" placeholder="Paste or type your input here…"></textarea>
+            <div class="action-row"><button class="primary-action" onclick="convert()"><i class="fas fa-wand-magic-sparkles"></i> Convert</button><button class="secondary-action copy-button" onclick="copyConvertOutput()"><i class="fas fa-copy"></i> Copy output</button></div>
+            <pre class="code-output" style="margin-top: 12px; overflow: auto"></pre>
+          </section>
+
+          <section id="mockgen-section" class="tool-section" style="display: none">
+            <div class="section-heading"><div><span class="section-kicker">Generate realistic data</span><h2>Mock Data</h2><p>Define a schema, choose the record count, and generate ready-to-use fixtures.</p></div></div>
+            <div class="tabs direction-tabs"><button onclick="switchMockTab('schema')" id="mock-tab-schema" class="active">Schema</button><button onclick="switchMockTab('docs')" id="mock-tab-docs">Docs</button></div>
+            <div id="mockgen-schema-panel">
+              <div class="form-grid compact-form">
+                <label><span>Records</span><input type="number" id="mockgen-count" value="1" min="1" max="1000" /></label>
+                <label><span>Preset</span><select onchange="loadMockPreset(this.value)"><option value="">Choose a preset</option><option value="User">User</option><option value="Product">Product</option></select></label>
+                <label class="wide"><span>Download name</span><input type="text" id="userInput" placeholder="optional filename" /></label>
+              </div>
+              <textarea id="mock-schema-input" class="json-input" placeholder="Define your schema here…"></textarea>
+              <div class="action-row"><button class="primary-action" onclick="generateMockData()"><i class="fas fa-wand-magic-sparkles"></i> Generate</button><button class="secondary-action" onclick="copyMockOutput('json')">Copy JSON</button><button class="secondary-action" onclick="copyMockOutput('csv')">Copy CSV</button><button class="secondary-action" onclick="exportMockOutput('json')">Export JSON</button><button class="secondary-action" onclick="exportMockOutput('csv')">Export CSV</button></div>
+              <div class="view-toggle-row"><p id="mock-stats"></p><div class="segmented-control"><label><input type="radio" name="mock-view-mode" value="json" checked onchange="updateMockView()" /><span>JSON</span></label><label><input type="radio" name="mock-view-mode" value="table" onchange="updateMockView()" /><span>Table</span></label></div></div>
+              <div id="mock-output-container"><pre id="mock-output" class="code-output"></pre></div>
+            </div>
+            <div id="mockgen-docs-panel" class="markdown-preview" style="display: none"><div id="mockgen-docs-preview"></div></div>
+          </section>
+
+          <section id="editor-section" class="tool-section" style="display: none">
+            <div class="section-heading"><div><span class="section-kicker">Write</span><h2>Markdown Editor</h2><p>Draft notes, docs, and technical content with a focused editor.</p></div></div>
+            <div id="editor-tabs-container" class="tabs tool-toolbar"><button class="add-tab-button primary-action" onclick="addEditorTab()"><i class="fas fa-plus"></i> New note</button></div>
+            <div id="editor-tab-contents"></div>
+          </section>
         </div>
 
-        <!-- Markdown Editor Section -->
-        <div id="editor-section" style="display: none">
-          <div id="editor-tabs-container" class="tabs">
-            <button class="add-tab-button" onclick="addEditorTab()">
-              + Add Tab
-            </button>
-          </div>
-          <div id="editor-tab-contents"></div>
-        </div>
-      </div>
+        <footer class="app-footer">
+          <span><i class="fas fa-shield-halved"></i> Data stays in your browser</span>
+          <span class="footer-separator">•</span>
+          <span>Open source under MIT</span>
+          <span class="footer-separator">•</span>
+          <a href="https://github.com/shravan20/jsonp/blob/main/README.md" target="_blank" rel="noopener noreferrer">Contribute</a>
+        </footer>
+      </main>
     </div>
 
-    <!-- Shortcut Modal -->
-    <div id="shortcut-modal" class="modal">
+    <div id="shortcut-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="shortcut-title">
       <div class="modal-content">
-        <span class="close-modal" onclick="toggleShortcutModal()">&times;</span>
-        <h2>Keyboard Shortcuts</h2>
-        <ul>
-          <li>
-            <strong>Ctrl + T</strong>: New Formatter Tab (in Formatter mode)
-          </li>
-          <li>
-            <strong>Ctrl + W</strong>: Close Current Formatter Tab (in Formatter
-            mode)
-          </li>
-          <li><strong>Ctrl + /</strong>: Show/Hide Shortcut Panel</li>
-        </ul>
+        <div class="modal-header"><div><span class="section-kicker">Productivity</span><h2 id="shortcut-title">Keyboard shortcuts</h2></div><button class="icon-button" onclick="toggleShortcutModal()" aria-label="Close shortcuts"><i class="fas fa-xmark"></i></button></div>
+        <div class="shortcut-list">
+          <div><span>New formatter tab</span><kbd>Ctrl</kbd><span>+</span><kbd>T</kbd></div>
+          <div><span>Close current formatter tab</span><kbd>Ctrl</kbd><span>+</span><kbd>W</kbd></div>
+          <div><span>Show / hide shortcuts</span><kbd>Ctrl</kbd><span>+</span><kbd>/</kbd></div>
+        </div>
       </div>
     </div>
 
-    <div class="github-links">
-      <a
-        href="https://github.com/shravan20/jsonp"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="github-button"
-      >
-        <i class="fab fa-github"></i> View on GitHub
-      </a>
-      <a
-        href="https://github.com/shravan20/jsonp/blob/main/README.md"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="contribute-button"
-      >
-        <i class="fas fa-hands-helping"></i> Contribute
-      </a>
-    </div>
-
-    <p align="center">
-      <img
-        src="https://madewithlove.now.sh/in?heart=true&colorA=%23ff671f&colorB=%23046a38&text=India"
-        alt="Made with love with Open Source"
-      />
-    </p>
+    <script>
+      const titleByMode = { formatter: 'JSON Formatter', compare: 'JSON Compare', codegen: 'JSON to Code', convert: 'Dict ↔ JSON', mockgen: 'Mock Data', editor: 'Markdown Editor' };
+      const originalSwitchMode = window.switchMode;
+      window.switchMode = function (mode) {
+        originalSwitchMode(mode);
+        const title = document.getElementById('page-title');
+        if (title) title.textContent = titleByMode[mode] || 'JSONP';
+        document.body.classList.remove('sidebar-open');
+      };
+    </script>
     <script src="index.js"></script>
   </body>
 </html>
