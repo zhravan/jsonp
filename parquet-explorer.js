@@ -13,7 +13,7 @@ const DUCKDB_TIMEOUT = 30000;
 
 function parquetEscapeIdent(value) { return '"' + String(value).replaceAll('"', '""') + '"'; }
 function parquetEscapeString(value) { return "'" + String(value).replaceAll("'", "''") + "'"; }
-function escapeParquetHtml(value) { return String(value ?? '').replace(/[&<>\'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function escapeParquetHtml(value) { return String(value ?? '').replace(/[&<>\'\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 function formatParquetValue(value) { if (value === null || value === undefined) return 'NULL'; if (typeof value === 'object') return JSON.stringify(value); return String(value); }
 function parquetToast(title, icon = 'info') { if (window.Swal) Swal.fire({ title, icon, toast: true, position: 'top-end', timer: 2600, showConfirmButton: false }); }
 function activeParquetTab() { return parquetState.tabs.find(tab => tab.id === parquetState.activeTabId) || null; }
@@ -23,15 +23,22 @@ function parquetWithTimeout(promise, message) { let timer; const timeout = new P
 async function loadDuckDB() {
   if (parquetState.db && parquetState.conn) return parquetState.db;
   if (parquetState.initPromise) return parquetState.initPromise;
+
   parquetState.initPromise = (async () => {
     const duckdb = await import(DUCKDB_MJS);
     const bundles = duckdb.getJsDelivrBundles();
     const bundle = await duckdb.selectBundle(bundles);
     if (!bundle?.mainWorker || !bundle?.mainModule) throw new Error('DuckDB-WASM bundle could not be selected.');
-    const workerUrl = URL.createObjectURL(new Blob([`importScripts(${JSON.stringify(bundle.mainWorker)});`], { type: 'text/javascript' }));
+
+    // GitHub Pages can reject a Blob-created worker depending on its security
+    // policy. Start a real same-origin worker from this repository instead.
+    // The bootstrap then imports DuckDB's selected CDN worker inside the worker.
+    const workerUrl = new URL('duckdb-worker.js', document.baseURI);
+    workerUrl.searchParams.set('src', bundle.mainWorker);
+
     let worker;
     try {
-      worker = new Worker(workerUrl);
+      worker = new Worker(workerUrl.href);
       const db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
       await parquetWithTimeout(db.instantiate(bundle.mainModule, bundle.pthreadWorker), 'DuckDB took too long to initialize. Please refresh and try again.');
       const conn = await parquetWithTimeout(db.connect(), 'Could not connect to the local DuckDB engine.');
@@ -41,8 +48,15 @@ async function loadDuckDB() {
     } catch (error) {
       try { worker?.terminate(); } catch (_) {}
       throw error;
-    } finally { URL.revokeObjectURL(workerUrl); }
-  })().catch(error => { parquetState.db = null; parquetState.conn = null; throw error; }).finally(() => { parquetState.initPromise = null; });
+    } finally {
+      // workerUrl is a normal same-origin URL, so there is nothing to revoke.
+    }
+  })().catch(error => {
+    parquetState.db = null;
+    parquetState.conn = null;
+    throw error;
+  }).finally(() => { parquetState.initPromise = null; });
+
   return parquetState.initPromise;
 }
 
@@ -85,18 +99,21 @@ function createParquetUI() {
     <div id="parquet-error" class="parquet-loading" hidden><span style="color:#ef4444"><i class="fas fa-circle-exclamation"></i></span><div><strong>Could not open Parquet files</strong><small id="parquet-error-detail"></small></div></div>
     <div id="parquet-empty-state" class="parquet-empty-state"><i class="fas fa-database"></i><strong>No datasets open</strong><span>Add one or more .parquet files to start exploring.</span></div>
     <div id="parquet-tabs-wrap" hidden><div class="parquet-tabs-bar" id="parquet-file-tabs"><button class="parquet-add-tab" id="parquet-add-tab" title="Add Parquet files"><i class="fas fa-plus"></i></button></div><div class="parquet-tab-hint">Double-click a dataset tab to rename it.</div></div>
-    <div id="parquet-app" class="parquet-app" hidden><div class="parquet-toolbar"><div class="dataset-identity"><span class="dataset-icon"><i class="fas fa-table"></i></span><div><strong id="parquet-file-name"></strong><small id="parquet-file-meta"></small></div></div><div class="parquet-actions"><button class="secondary-action" id="parquet-open-btn"><i class="fas fa-plus"></i> Add files</button><button class="secondary-action" id="parquet-export-btn"><i class="fas fa-download"></i> Export CSV</button></div></div><div class="parquet-body"><aside class="parquet-schema-panel"><div class="schema-header"><span>Schema</span><span id="parquet-column-count">0</span></div><div id="parquet-schema-list" class="schema-list"></div></aside><div class="parquet-main"><div class="parquet-querybar"><div class="query-label"><i class="fas fa-terminal"></i><span>Quick filter</span></div><input id="parquet-filter" type="text" placeholder="e.g. amount > 1000 or status = 'active'"><button class="primary-action" id="parquet-run-filter"><i class="fas fa-play"></i> Run</button><button class="icon-button" id="parquet-clear-filter"><i class="fas fa-xmark"></i></button></div><div class="parquet-subtabs"><button class="parquet-subtab active" data-view="data">Data</button><button class="parquet-subtab" data-view="schema">Schema details</button></div><div id="parquet-data-view" class="parquet-view active"><div class="table-wrap"><table id="parquet-table"><thead></thead><tbody></tbody></table></div><div class="table-status"><span id="parquet-result-count">0 rows</span><div class="pagination"><button id="parquet-prev"><i class="fas fa-chevron-left"></i></button><span id="parquet-page-label">Page 1</span><button id="parquet-next"><i class="fas fa-chevron-right"></i></button></div></div></div><div id="parquet-schema-view" class="parquet-view"><div class="parquet-schema-details" id="parquet-schema-details"></div></div></div></div></div>`;
+    <div id="parquet-app" class="parquet-app" hidden><div class="parquet-toolbar"><div class="dataset-identity"><span class="dataset-icon"><i class="fas fa-table"></i></span><div><strong id="parquet-file-name"></strong><small id="parquet-file-meta"></small></div></div><div class="parquet-actions"><button class="secondary-action" id="parquet-open-btn"><i class="fas fa-plus"></i> Add files</button><button class="secondary-action" id="parquet-export-btn"><i class="fas fa-download"></i> Export CSV</button></div></div><div class="parquet-body"><aside class="parquet-schema-panel"><div class="schema-header"><span>Schema</span><span id="parquet-column-count">0</span></div><div id="parquet-schema-list" class="schema-list"></div></aside><main class="parquet-main"><div class="parquet-querybar"><label class="query-label"><i class="fas fa-filter"></i> Filter</label><input id="parquet-filter" placeholder="e.g. age > 30 AND status = 'active'"><button class="secondary-action" id="parquet-apply-filter">Apply</button><button class="secondary-action" id="parquet-clear-filter">Clear</button></div><div class="parquet-subtabs"><button class="parquet-subtab active" data-view="data">Data</button><button class="parquet-subtab" data-view="schema">Schema details</button></div><div id="parquet-data-view" class="parquet-view active"><div class="table-wrap"><table id="parquet-table"><thead></thead><tbody></tbody></table></div><div class="table-status"><span id="parquet-result-count"></span><div class="pagination"><button id="parquet-prev">‹</button><span id="parquet-page-label"></span><button id="parquet-next">›</button></div></div></div><div id="parquet-schema-view" class="parquet-view"><div id="parquet-schema-details" class="parquet-schema-details"></div></div></main></div></div>
+  `;
   shell.appendChild(section);
-
   const input = section.querySelector('#parquet-file-input');
-  section.querySelector('.inline-link').onclick = () => input.click();
-  section.querySelector('#parquet-open-btn').onclick = () => { if (parquetState.tabs.length >= parquetState.maxTabs) return parquetToast('Maximum 10 Parquet tabs are open', 'info'); input.click(); };
-  input.onchange = event => { const files = Array.from(event.target.files || []); event.target.value = ''; if (files.length) openParquetFiles(files); };
-  const dz = section.querySelector('#parquet-dropzone');
-  ['dragenter','dragover'].forEach(eventName => dz.addEventListener(eventName, event => { event.preventDefault(); dz.classList.add('dragging'); }));
-  ['dragleave','drop'].forEach(eventName => dz.addEventListener(eventName, event => { event.preventDefault(); dz.classList.remove('dragging'); }));
-  dz.addEventListener('drop', event => { const files = Array.from(event.dataTransfer.files || []).filter(file => /\.parq(uet)?$/i.test(file.name)); if (files.length) openParquetFiles(files); else parquetToast('Please drop .parquet files', 'info'); });
-  section.querySelector('#parquet-run-filter').onclick = applyParquetFilter;
+  const drop = section.querySelector('#parquet-dropzone');
+  const openFiles = () => input.click();
+  drop.addEventListener('click', event => { if (event.target.closest('button')) return openFiles(); openFiles(); });
+  drop.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') openFiles(); });
+  ['dragenter','dragover'].forEach(type => drop.addEventListener(type, event => { event.preventDefault(); drop.classList.add('dragging'); }));
+  ['dragleave','drop'].forEach(type => drop.addEventListener(type, event => { event.preventDefault(); drop.classList.remove('dragging'); }));
+  drop.addEventListener('drop', event => openParquetFiles(Array.from(event.dataTransfer.files)));
+  input.addEventListener('change', event => { openParquetFiles(Array.from(event.target.files || [])); input.value = ''; });
+  section.querySelector('#parquet-open-btn').onclick = openFiles;
+  section.querySelector('#parquet-export-btn').onclick = exportParquetCsv;
+  section.querySelector('#parquet-apply-filter').onclick = applyParquetFilter;
   section.querySelector('#parquet-clear-filter').onclick = clearParquetFilter;
   section.querySelector('#parquet-prev').onclick = () => changeParquetPage(-1);
   section.querySelector('#parquet-next').onclick = () => changeParquetPage(1);
