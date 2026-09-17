@@ -37,6 +37,7 @@
             <button class="feature-item" onclick="switchMode('codegen')"><span class="feature-icon"><i class="fas fa-file-code"></i></span><span class="feature-copy"><strong>JSON to Code</strong><small>Generate typed models</small></span><kbd>3</kbd></button>
             <button class="feature-item" onclick="switchMode('convert')"><span class="feature-icon"><i class="fas fa-right-left"></i></span><span class="feature-copy"><strong>Dict ↔ JSON</strong><small>Transform instantly</small></span><kbd>4</kbd></button>
             <button class="feature-item" onclick="switchMode('mockgen')"><span class="feature-icon"><i class="fas fa-wand-magic-sparkles"></i></span><span class="feature-copy"><strong>Mock Data</strong><small>Generate realistic fixtures</small></span><kbd>5</kbd></button>
+            <button class="feature-item" onclick="switchMode('uuid')"><span class="feature-icon"><i class="fas fa-fingerprint"></i></span><span class="feature-copy"><strong>UUID Generator</strong><small>Create v1–v5 identifiers</small></span><kbd>7</kbd></button>
             <button class="feature-item" onclick="switchMode('editor')"><span class="feature-icon"><i class="fas fa-pen-to-square"></i></span><span class="feature-copy"><strong>Markdown Editor</strong><small>Write and preview docs</small></span><kbd>6</kbd></button>
           </nav>
           <div class="sidebar-tip"><div class="tip-icon"><i class="fas fa-bolt"></i></div><div><strong>Built for flow</strong><p>Your work is saved locally as you switch between tools.</p></div></div>
@@ -66,6 +67,7 @@
       const originalSwitchModeForInit = window.switchMode;
       window.switchMode = function (mode) { originalSwitchModeForInit(mode); const title = document.getElementById('page-title'); if (title) title.textContent = titleByMode[mode] || 'JSONP'; document.body.classList.remove('sidebar-open'); };
     </script>
+    <script src="uuid-generator.js"></script>
     <script type="module" src="parquet-explorer.js"></script>
   </body>
 </html>
