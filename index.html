@@ -60,11 +60,12 @@
     <div id="shortcut-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="shortcut-title"><div class="modal-content"><div class="modal-header"><div><span class="section-kicker">Productivity</span><h2 id="shortcut-title">Keyboard shortcuts</h2></div><button class="icon-button" onclick="toggleShortcutModal()" aria-label="Close shortcuts"><i class="fas fa-xmark"></i></button></div><div class="shortcut-list"><div><span>New formatter tab</span><kbd>Ctrl</kbd><span>+</span><kbd>T</kbd></div><div><span>Close current formatter tab</span><kbd>Ctrl</kbd><span>+</span><kbd>W</kbd></div><div><span>Show / hide shortcuts</span><kbd>Ctrl</kbd><span>+</span><kbd>/</kbd></div></div></div></div>
     <script src="index.js"></script>
     <script>
-      const titleByMode = { formatter: 'JSON Formatter', compare: 'JSON Compare', codegen: 'JSON to Code', convert: 'Dict ↔ JSON', mockgen: 'Mock Data', editor: 'Markdown Editor' };
+      const titleByMode = { formatter: 'JSON Formatter', compare: 'JSON Compare', codegen: 'JSON to Code', convert: 'Dict ↔ JSON', mockgen: 'Mock Data', editor: 'Markdown Editor', parquet: 'Parquet Explorer' };
       const originalSwitchMode = window.switchMode;
       window.switchMode = function (mode) { originalSwitchMode(mode); const title = document.getElementById('page-title'); if (title) title.textContent = titleByMode[mode] || 'JSONP'; document.body.classList.remove('sidebar-open'); };
       const originalSwitchModeForInit = window.switchMode;
       window.switchMode = function (mode) { originalSwitchModeForInit(mode); const title = document.getElementById('page-title'); if (title) title.textContent = titleByMode[mode] || 'JSONP'; document.body.classList.remove('sidebar-open'); };
     </script>
+    <script type="module" src="parquet-explorer.js"></script>
   </body>
 </html>
