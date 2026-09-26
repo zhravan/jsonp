@@ -68,7 +68,7 @@
       const originalSwitchModeForInit = window.switchMode;
       window.switchMode = function (mode) { originalSwitchModeForInit(mode); const title = document.getElementById('page-title'); if (title) title.textContent = titleByMode[mode] || 'JSONP'; document.body.classList.remove('sidebar-open'); };
     </script>
-    <script src="uuid-generator.js"></script>
+    <script src="jsonpath-explorer.js"></script>\n    <script src="uuid-generator.js"></script>
     <script src="cron-generator.js"></script>
     <script type="module" src="parquet-explorer.js"></script>
   </body>
