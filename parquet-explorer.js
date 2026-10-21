@@ -199,11 +199,11 @@ async function openParquetFiles(files) {
       const buffer = new Uint8Array(await file.arrayBuffer());
       if (!buffer.byteLength) throw new Error(`${file.name} is empty.`);
 
-      await parquetWithTimeout(
-        db.registerFileBuffer(path, buffer),
-        `Timed out while loading ${file.name}. Try a smaller file or check browser memory limits.`
-      );
       try {
+        await parquetWithTimeout(
+          db.registerFileBuffer(path, buffer),
+          `Timed out while loading ${file.name}. Try a smaller file or check browser memory limits.`
+        );
         await parquetWithTimeout(
           parquetState.conn.query(`CREATE VIEW ${parquetEscapeIdent(viewName)} AS SELECT * FROM read_parquet(${parquetEscapeString(path)})`),
           `Timed out while reading ${file.name}. Check that the file is a valid Parquet file.`
