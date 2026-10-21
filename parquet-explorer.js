@@ -27,13 +27,17 @@ async function loadDuckDB() {
   parquetState.initPromise = (async () => {
     const duckdb = await import(DUCKDB_MJS);
     const bundles = duckdb.getJsDelivrBundles();
-    const bundle = await duckdb.selectBundle(bundles);
-    if (!bundle?.mainWorker || !bundle?.mainModule) throw new Error('DuckDB-WASM bundle could not be selected.');
+    // The MVP bundle avoids cross-origin isolation / pthread requirements and
+    // is sufficient for local Parquet inspection. Keep its worker and wasm
+    // module paired; mixing bundle entries can prevent DuckDB from starting.
+    const bundle = bundles.mvp;
+    if (!bundle?.mainWorker || !bundle?.mainModule) {
+      throw new Error('The DuckDB-WASM MVP bundle is unavailable. Check your network/CDN access and refresh.');
+    }
 
-    // GitHub Pages can reject a Blob-created worker depending on its security
-    // policy. Start a real same-origin worker from this repository instead.
-    // The bootstrap then imports DuckDB's selected CDN worker inside the worker.
-    const workerUrl = new URL('duckdb-worker.js', document.baseURI);
+    // Use a same-origin worker so static hosts such as GitHub Pages can load
+    // it under their worker CSP. The bootstrap imports the selected worker.
+    const workerUrl = new URL('duckdb-worker.js', import.meta.url);
     workerUrl.searchParams.set('src', bundle.mainWorker);
 
     let worker;
@@ -48,8 +52,6 @@ async function loadDuckDB() {
     } catch (error) {
       try { worker?.terminate(); } catch (_) {}
       throw error;
-    } finally {
-      // workerUrl is a normal same-origin URL, so there is nothing to revoke.
     }
   })().catch(error => {
     parquetState.db = null;
@@ -152,50 +154,112 @@ function renderActiveParquetTab() {
 }
 
 async function openParquetFiles(files) {
+  // A cancelled picker or empty drop is not a failure and must never start
+  // DuckDB or replace the current empty state with an error.
+  const selected = Array.from(files || []);
+  if (!selected.length) return;
+
+  const valid = selected.filter(file => /\\.parq(uet)?$/i.test(file.name) && file.size > 0);
+  if (!valid.length) {
+    parquetToast('Choose a non-empty .parquet or .parq file.', 'info');
+    return;
+  }
+
   const remaining = Math.max(0, parquetState.maxTabs - parquetState.tabs.length);
   if (!remaining) return parquetToast('Maximum 10 Parquet tabs are already open', 'info');
-  const valid = files.filter(file => /\.parq(uet)?$/i.test(file.name)).slice(0, remaining);
-  if (!valid.length) return parquetToast('Please choose .parquet files', 'info');
-  if (files.length > remaining) parquetToast(`Only ${remaining} more tab${remaining === 1 ? '' : 's'} can be opened`, 'info');
+  const filesToOpen = valid.slice(0, remaining);
+  if (valid.length > remaining) {
+    parquetToast(`Only ${remaining} more tab${remaining === 1 ? '' : 's'} can be opened`, 'info');
+  }
 
   const loading = document.getElementById('parquet-loading');
   const errorBox = document.getElementById('parquet-error');
   const drop = document.getElementById('parquet-dropzone');
   const empty = document.getElementById('parquet-empty-state');
-  loading.hidden = false; errorBox.hidden = true; drop.hidden = true; empty.hidden = true;
+  loading.hidden = false;
+  errorBox.hidden = true;
+  drop.hidden = true;
+  empty.hidden = true;
+
+  const openedThisAttempt = [];
   try {
-    document.getElementById('parquet-loading-title').textContent = `Opening ${valid.length} file${valid.length === 1 ? '' : 's'}…`;
+    document.getElementById('parquet-loading-title').textContent = `Opening ${filesToOpen.length} file${filesToOpen.length === 1 ? '' : 's'}…`;
     document.getElementById('parquet-loading-text').textContent = 'Initializing the local DuckDB engine';
     const db = await loadDuckDB();
-    for (let index = 0; index < valid.length; index++) {
-      const file = valid[index];
-      document.getElementById('parquet-loading-title').textContent = `Opening ${index + 1} of ${valid.length}…`;
+
+    for (let index = 0; index < filesToOpen.length; index++) {
+      const file = filesToOpen[index];
+      document.getElementById('parquet-loading-title').textContent = `Opening ${index + 1} of ${filesToOpen.length}…`;
       document.getElementById('parquet-loading-text').textContent = file.name;
+
       const id = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const viewName = parquetTableName(id);
-      const path = `/parquet/${id}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `/parquet/${id}-${safeName}`;
       const buffer = new Uint8Array(await file.arrayBuffer());
-      await parquetWithTimeout(db.registerFileBuffer(path, buffer), `Timed out while loading ${file.name}.`);
-      await parquetWithTimeout(parquetState.conn.query(`CREATE OR REPLACE VIEW ${parquetEscapeIdent(viewName)} AS SELECT * FROM read_parquet(${parquetEscapeString(path)})`), `Timed out while reading ${file.name}.`);
-      const countResult = await parquetWithTimeout(parquetState.conn.query(`SELECT COUNT(*)::BIGINT AS n FROM ${parquetEscapeIdent(viewName)}`), `Timed out while counting rows in ${file.name}.`);
-      const schemaResult = await parquetWithTimeout(parquetState.conn.query(`DESCRIBE ${parquetEscapeIdent(viewName)}`), `Timed out while reading the schema of ${file.name}.`);
-      const tab = { id, viewName, originalName: file.name, name: file.name.replace(/\.parq(uet)?$/i, ''), size: file.size, totalRows: Number(countResult.toArray()[0]?.n || 0), columns: schemaResult.toArray().map(row => ({ name: row.column_name, type: row.column_type, nullable: row.null })), page: 0, filter: '', path };
-      parquetState.tabs.push(tab);
-      parquetState.activeTabId = id;
-      renderParquetTabs();
+      if (!buffer.byteLength) throw new Error(`${file.name} is empty.`);
+
+      await parquetWithTimeout(
+        db.registerFileBuffer(path, buffer),
+        `Timed out while loading ${file.name}. Try a smaller file or check browser memory limits.`
+      );
+      try {
+        await parquetWithTimeout(
+          parquetState.conn.query(`CREATE VIEW ${parquetEscapeIdent(viewName)} AS SELECT * FROM read_parquet(${parquetEscapeString(path)})`),
+          `Timed out while reading ${file.name}. Check that the file is a valid Parquet file.`
+        );
+        const countResult = await parquetWithTimeout(
+          parquetState.conn.query(`SELECT COUNT(*)::BIGINT AS n FROM ${parquetEscapeIdent(viewName)}`),
+          `Timed out while counting rows in ${file.name}.`
+        );
+        const schemaResult = await parquetWithTimeout(
+          parquetState.conn.query(`DESCRIBE ${parquetEscapeIdent(viewName)}`),
+          `Timed out while reading the schema of ${file.name}.`
+        );
+        const tab = {
+          id,
+          viewName,
+          originalName: file.name,
+          name: file.name.replace(/\\.parq(uet)?$/i, ''),
+          size: file.size,
+          totalRows: Number(countResult.toArray()[0]?.n || 0),
+          columns: schemaResult.toArray().map(row => ({
+            name: row.column_name,
+            type: row.column_type,
+            nullable: row.null,
+          })),
+          page: 0,
+          filter: '',
+          path,
+        };
+        parquetState.tabs.push(tab);
+        openedThisAttempt.push(tab);
+        parquetState.activeTabId = id;
+        renderParquetTabs();
+      } catch (error) {
+        // Do not leave a broken view behind if a file cannot be parsed.
+        try { await parquetState.conn.query(`DROP VIEW IF EXISTS ${parquetEscapeIdent(viewName)}`); } catch (_) {}
+        try { await db.dropFile(path); } catch (_) {}
+        throw new Error(`Could not read "${file.name}": ${error?.message || String(error)}`);
+      }
     }
+
     renderActiveParquetTab();
-    parquetToast(`${valid.length} Parquet file${valid.length === 1 ? '' : 's'} opened`, 'success');
+    parquetToast(`${openedThisAttempt.length} Parquet file${openedThisAttempt.length === 1 ? '' : 's'} opened`, 'success');
   } catch (error) {
     console.error('Parquet Explorer:', error);
+    // Keep any files opened before a later file failed; show the failed-file
+    // message without throwing away the successful tabs.
     errorBox.hidden = false;
-    document.getElementById('parquet-error-detail').textContent = error?.message || String(error);
-    drop.hidden = parquetState.tabs.length > 0;
+    document.getElementById('parquet-error-detail').textContent =
+      error?.message || 'DuckDB could not initialize. Check your connection and reload the page.';
+    drop.hidden = false;
     empty.hidden = parquetState.tabs.length > 0;
     parquetToast('Could not open Parquet file', 'error');
   } finally {
     loading.hidden = true;
-    if (parquetState.tabs.length) { drop.hidden = false; empty.hidden = true; }
+    drop.hidden = false;
+    if (parquetState.tabs.length) empty.hidden = true;
     renderParquetTabs();
   }
 }
