@@ -159,7 +159,7 @@ async function openParquetFiles(files) {
   const selected = Array.from(files || []);
   if (!selected.length) return;
 
-  const valid = selected.filter(file => /\\.parq(uet)?$/i.test(file.name) && file.size > 0);
+  const valid = selected.filter(file => /\.parq(uet)?$/i.test(file.name) && file.size > 0);
   if (!valid.length) {
     parquetToast('Choose a non-empty .parquet or .parq file.', 'info');
     return;
@@ -220,7 +220,7 @@ async function openParquetFiles(files) {
           id,
           viewName,
           originalName: file.name,
-          name: file.name.replace(/\\.parq(uet)?$/i, ''),
+          name: file.name.replace(/\.parq(uet)?$/i, ''),
           size: file.size,
           totalRows: Number(countResult.toArray()[0]?.n || 0),
           columns: schemaResult.toArray().map(row => ({
