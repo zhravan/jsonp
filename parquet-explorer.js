@@ -43,9 +43,23 @@ async function loadDuckDB() {
     let worker;
     try {
       worker = new Worker(workerUrl.href);
+      // Worker startup failures otherwise often surface only as a generic
+      // DuckDB initialization timeout in browsers.
+      const workerStartupError = new Promise((_, reject) => {
+        worker.addEventListener('error', event => {
+          const detail = event.message || 'The DuckDB worker failed to load. Check that duckdb-worker.js and the DuckDB CDN are reachable.';
+          reject(new Error(detail));
+        }, { once: true });
+      });
       const db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
-      await parquetWithTimeout(db.instantiate(bundle.mainModule, bundle.pthreadWorker), 'DuckDB took too long to initialize. Please refresh and try again.');
-      const conn = await parquetWithTimeout(db.connect(), 'Could not connect to the local DuckDB engine.');
+      await parquetWithTimeout(
+        Promise.race([db.instantiate(bundle.mainModule, bundle.pthreadWorker), workerStartupError]),
+        'DuckDB initialization timed out after 30 seconds. Check browser console and network access to jsDelivr.'
+      );
+      const conn = await parquetWithTimeout(
+        Promise.race([db.connect(), workerStartupError]),
+        'DuckDB could not connect after initialization.'
+      );
       parquetState.db = db;
       parquetState.conn = conn;
       return db;
@@ -252,8 +266,9 @@ async function openParquetFiles(files) {
     // Keep any files opened before a later file failed; show the failed-file
     // message without throwing away the successful tabs.
     errorBox.hidden = false;
+    const detail = error?.message || String(error || '');
     document.getElementById('parquet-error-detail').textContent =
-      error?.message || 'DuckDB could not initialize. Check your connection and reload the page.';
+      detail.trim() || 'DuckDB could not initialize. Open Developer Tools → Console for the underlying browser error.';
     drop.hidden = false;
     empty.hidden = parquetState.tabs.length > 0;
     parquetToast('Could not open Parquet file', 'error');
