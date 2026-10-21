@@ -237,7 +237,8 @@ async function openParquetFiles(files) {
         parquetState.activeTabId = id;
         renderParquetTabs();
       } catch (error) {
-        // Do not leave a broken view behind if a file cannot be parsed.
+        // Do not leave a broken view or registered buffer behind if a file
+        // cannot be parsed (or registration itself fails).
         try { await parquetState.conn.query(`DROP VIEW IF EXISTS ${parquetEscapeIdent(viewName)}`); } catch (_) {}
         try { await db.dropFile(path); } catch (_) {}
         throw new Error(`Could not read "${file.name}": ${error?.message || String(error)}`);
