@@ -37,19 +37,33 @@ async function loadDuckDB() {
 
     // Use a same-origin worker so static hosts such as GitHub Pages can load
     // it under their worker CSP. The bootstrap imports the selected worker.
-    const workerUrl = new URL('duckdb-worker.js', import.meta.url);
+    const workerUrl = new URL('./duckdb-worker.js', import.meta.url);
     workerUrl.searchParams.set('src', bundle.mainWorker);
 
     let worker;
     try {
-      worker = new Worker(workerUrl.href);
-      // Worker startup failures otherwise often surface only as a generic
-      // DuckDB initialization timeout in browsers.
+      // GitHub Pages can host this bootstrap at a project subpath. Resolve it
+      // relative to this module (not the document URL) and fail fast with the
+      // actual worker URL if the browser cannot start it.
       const workerStartupError = new Promise((_, reject) => {
-        worker.addEventListener('error', event => {
-          const detail = event.message || 'The DuckDB worker failed to load. Check that duckdb-worker.js and the DuckDB CDN are reachable.';
-          reject(new Error(detail));
-        }, { once: true });
+        let settled = false;
+        const rejectStartup = message => {
+          if (settled) return;
+          settled = true;
+          reject(new Error(message));
+        };
+        try {
+          worker = new Worker(workerUrl.href);
+          worker.addEventListener('error', event => {
+            const detail = event.message || 'Unknown worker startup error';
+            rejectStartup(`DuckDB worker failed (${workerUrl.href}): ${detail}. Check GitHub Pages deployment and CDN/CSP access.`);
+          }, { once: true });
+          worker.addEventListener('messageerror', () => {
+            rejectStartup(`DuckDB worker message could not be decoded (${workerUrl.href}).`);
+          }, { once: true });
+        } catch (error) {
+          rejectStartup(`Could not create DuckDB worker at ${workerUrl.href}: ${error?.message || String(error)}`);
+        }
       });
       const db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
       await parquetWithTimeout(
